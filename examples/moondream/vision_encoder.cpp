@@ -276,14 +276,6 @@ static std::string gguf_kv_to_str(const struct gguf_context *ctx_gguf, int i)
     }
 }
 
-static void print_tensor_info(const ggml_tensor *tensor, const char *prefix = "")
-{
-    size_t tensor_size = ggml_nbytes(tensor);
-    printf("%s: n_dims = %d, name = %s, tensor_size=%zu, shape:[%" PRId64 ", %" PRId64 ", %" PRId64 ", %" PRId64 "], type = %s\n",
-           prefix, ggml_n_dims(tensor), tensor->name, tensor_size,
-           tensor->ne[0], tensor->ne[1], tensor->ne[2], tensor->ne[3], ggml_type_name(tensor->type));
-}
-
 static projector_type clip_projector_type_from_string(const std::string &name)
 {
     for (const auto &kv : PROJECTOR_TYPE_NAMES)
@@ -1269,42 +1261,6 @@ bool clip_image_load_from_bytes(const unsigned char *bytes, size_t bytes_length,
 inline float lerp(float s, float e, float t)
 {
     return s + (e - s) * t;
-}
-// Bilinear resize function
-static void bilinear_resize(const clip_image_u8 &src, clip_image_u8 &dst, int target_width, int target_height)
-{
-    dst.nx = target_width;
-    dst.ny = target_height;
-    dst.buf.resize(3 * target_width * target_height);
-
-    float x_ratio = static_cast<float>(src.nx - 1) / target_width;
-    float y_ratio = static_cast<float>(src.ny - 1) / target_height;
-
-    for (int y = 0; y < target_height; y++)
-    {
-        for (int x = 0; x < target_width; x++)
-        {
-            float px = x_ratio * x;
-            float py = y_ratio * y;
-            int x_floor = static_cast<int>(px);
-            int y_floor = static_cast<int>(py);
-            float x_lerp = px - x_floor;
-            float y_lerp = py - y_floor;
-
-            for (int c = 0; c < 3; c++)
-            {
-                float top = lerp(
-                    static_cast<float>(src.buf[3 * (y_floor * src.nx + x_floor) + c]),
-                    static_cast<float>(src.buf[3 * (y_floor * src.nx + (x_floor + 1)) + c]),
-                    x_lerp);
-                float bottom = lerp(
-                    static_cast<float>(src.buf[3 * ((y_floor + 1) * src.nx + x_floor) + c]),
-                    static_cast<float>(src.buf[3 * ((y_floor + 1) * src.nx + (x_floor + 1)) + c]),
-                    x_lerp);
-                dst.buf[3 * (y * target_width + x) + c] = static_cast<uint8_t>(lerp(top, bottom, y_lerp));
-            }
-        }
-    }
 }
 
 // Normalize image to float32 - careful with pytorch .to(model.device, dtype=torch.float16) - this sometimes reduces precision (32>16>32), sometimes not

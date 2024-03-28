@@ -114,6 +114,9 @@ When running llava-cli you will see a visual information right before the prompt
 Alternatively just pay notice to how many "tokens" have been used for your prompt, it will also show 1000+ tokens for llava-1.6
 
 
+## to build for node-moondream
+`make LLAMA_METAL_EMBED_LIBRARY=ON`
+
 
 
 ## TODO
